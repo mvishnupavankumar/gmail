@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Gmail Mobile Clone</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f6f8fc;
+            --primary-blue: #0b57d0;
+            --text-main: #1f1f1f;
+            --text-muted: #5f6368;
+            --border-color: #e0e0e0;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Mobile App Container (Centered if on desktop browser) */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 480px;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* Mobile Search Bar Header */
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            background: #f1f3f4;
+            margin: 8px 16px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            gap: 16px;
+        }
+        .mobile-header input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 16px;
+            outline: none;
+        }
+        .profile-icon {
+            width: 32px; height: 32px; border-radius: 50%; background: #5c6bc0;
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; flex-shrink: 0;
+        }
+
+        /* Mail List Area */
+        .mail-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-muted);
+            padding: 12px 16px 4px 16px;
+            letter-spacing: 0.8px;
+        }
+
+        .mail-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 16px;
+            gap: 16px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+        }
+        .mail-item.unread { background: #ffffff; }
+        .mail-item.unread .mail-subject { font-weight: 700; color: black; }
+        .mail-item.unread .mail-sender { font-weight: 700; color: black; }
+
+        .mail-avatar {
+            width: 40px; height: 40px; border-radius: 50%; background: #1a73e8;
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .mail-content { flex: 1; min-width: 0; }
+        .mail-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .mail-sender { font-size: 15px; color: var(--text-main); }
+        .mail-date { font-size: 12px; color: var(--text-muted); font-weight: normal; }
+        .mail-subject { font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
+        .mail-snippet { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: normal; }
+
+        .attachment-chip {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #dadce0;
+            border-radius: 16px;
+            padding: 4px 12px 4px 8px;
+            font-size: 12px;
+            color: #3c4043;
+            margin-top: 4px;
+            width: fit-content;
+        }
+        .attachment-chip .material-icons { font-size: 16px; margin-right: 6px; }
+
+        /* Floating Compose Button (FAB) */
+        .fab {
+            position: absolute;
+            bottom: 76px;
+            right: 20px;
+            background: #c2e7ff;
+            color: #001d35;
+            padding: 16px 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* Bottom Navigation Bar */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 10;
+        }
+        .nav-tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .nav-tab.active { color: #0b57d0; font-weight: bold; }
+        .nav-tab .material-icons { font-size: 24px; margin-bottom: 2px; }
+
+        /* Full Screen Thread Detail View */
+        #thread-view {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            flex-direction: column;
+            z-index: 50;
+        }
+        .thread-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            gap: 16px;
+            color: var(--text-muted);
+        }
+        .thread-body-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .thread-subject-title { font-size: 18px; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+        
+        /* Mobile Message Cards */
+        .thread-msg-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .thread-msg-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .thread-msg-body { font-size: 14px; line-height: 1.5; white-space: pre-wrap; color: #202124; }
+
+        /* Security Dropdown (Mobile Optimized) */
+        .security-details { 
+            display: none; 
+            position: absolute; 
+            top: 60px; 
+            left: 16px; 
+            right: 16px; 
+            font-size: 12px; 
+            color: var(--text-main); 
+            border: 1px solid #dcdde1; 
+            padding: 12px; 
+            border-radius: 6px; 
+            background: #ffffff; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+            z-index: 100; 
+        }
+
+        .reply-suggestions { display: flex; gap: 8px; margin-top: 16px; overflow-x: auto; padding-bottom: 4px; }
+        .suggestion-chip { border: 1px solid #dadce0; border-radius: 16px; padding: 6px 12px; font-size: 13px; color: #1a73e8; cursor: pointer; background: white; white-space: nowrap; }
+
+        /* Full Screen Compose Screen */
+        #compose-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .compose-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .compose-field {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            font-size: 15px;
+            color: var(--text-muted);
+        }
+        .compose-field input { border: none; outline: none; width: 100%; font-size: 15px; margin-left: 8px; }
+        .compose-textarea-mobile {
+            flex: 1; border: none; padding: 16px; font-size: 15px; outline: none; resize: none; font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Inbox Screen -->
+        <div id="inbox-screen" style="display: flex; flex-direction: column; height: 100%;">
+            <div class="mobile-header">
+                <span class="material-icons" style="color: var(--text-muted);">menu</span>
+                <input type="text" placeholder="Search in emails">
+                <div class="profile-icon">M</div>
+            </div>
+
+            <div class="mail-list" id="mail-list">
+                <div class="section-label">PRIMARY</div>
+
+                <!-- Dummy Email 1 -->
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#1a73e8;">D</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">Dean Academics</span><span class="mail-date">Sep 9</span></div>
+                        <div class="mail-subject">Circular :Course Withdrawal for Fall 2026-27 Semester</div>
+                        <div class="mail-snippet">VIT-AP/2026/DoA/Withdrawal/2 Date: 09-09-2026 CIRCULA...</div>
+                        <div class="attachment-chip"><span class="material-icons" style="color:#ea4335;">picture_as_pdf</span> Circular Fall 20...</div>
+                    </div>
+                </div>
+
+                <!-- Dummy Email 2 -->
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#e37400;">V</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">VTAPP Convenor</span><span class="mail-date">Sep 9</span></div>
+                        <div class="mail-subject">Distribution of VTAPP 2026 Merchandise</div>
+                        <div class="mail-snippet">Dear Faculty Members, Staff Members, Research Scholars, and Students, ...</div>
+                    </div>
+                </div>
+
+                <!-- Dummy Email 3 -->
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#137333;">D</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">Deputy Director SDC</span><span class="mail-date">Sep 9</span></div>
+                        <div class="mail-subject">Reg: Face Biometric Attendance for Freshers and Senior Batches</div>
+                        <div class="mail-snippet">Dear All, From tomorrow onwards (10/09/2026), fa...</div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Target Email (Hidden initially, shown after compose) -->
+                <div class="mail-item unread" id="target-mail-row" style="display: none;" onclick="openThread()">
+                    <div class="mail-avatar" style="background:#7e57c2;">M</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row">
+                            <span class="mail-sender">me, Thota</span>
+                            <span class="mail-date" id="target-email-date">Sep 9</span>
+                        </div>
+                        <div class="mail-subject" id="inbox-subject">To go out permission</div>
+                        <div class="mail-snippet">Your request is approved. Best Regards, Dr. Thota Ramathulasi...</div>
+                    </div>
+                </div>
+
+                <!-- More Dummy Emails to Fill the List -->
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#4285f4;">P</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">PAT VIT-AP</span><span class="mail-date">Sep 9</span></div>
+                        <div class="mail-subject">Fwd: Urgent: UPL Summer Internship Registration- 2028 Batch</div>
+                        <div class="mail-snippet">Registration Extended - Kind Attn: UPL Applied Stud...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#ea4335;">M</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">MyBharat</span><span class="mail-date">Sep 8</span></div>
+                        <div class="mail-subject">Gentle Reminder: Participate in the VBYLD 2027 Quiz</div>
+                        <div class="mail-snippet">Dear User, A quick reminder to participate in the Viksit Bharat ...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#34a853;">V</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">VIVEK M 24BCA7249</span><span class="mail-date">Sep 8</span></div>
+                        <div class="mail-subject">REGARDING MSC RECRUITMENT</div>
+                        <div class="mail-snippet">Dear Applicant, Thank you for showing interest in joining the Microsoft Student Clu...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#fbbc04;">I</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">Internshala</span><span class="mail-date">Sep 7</span></div>
+                        <div class="mail-subject">Update: Flipkart is hiring | Confirm your application status</div>
+                        <div class="mail-snippet">Semester Side Quest Hey Marella Vishnu Pavan Kumar, Th...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#00acc1;">O</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">OpenAI</span><span class="mail-date">Sep 7</span></div>
+                        <div class="mail-subject">New sign-in to your OpenAI account</div>
+                        <div class="mail-snippet">New sign-in details for your OpenAI account. Hello, We noticed a new sign-in t...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#7cb342;">C</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">ChatGPT</span><span class="mail-date">Sep 7</span></div>
+                        <div class="mail-subject">Your temporary ChatGPT login code</div>
+                        <div class="mail-snippet">Enter this temporary verification code to continue: 749197 If you were not trying...</div>
+                    </div>
+                </div>
+
+                <div class="mail-item">
+                    <div class="mail-avatar" style="background:#d81b60;">A</div>
+                    <div class="mail-content">
+                        <div class="mail-header-row"><span class="mail-sender">Assistant Director</span><span class="mail-date">Sep 7</span></div>
+                        <div class="mail-subject">Invitation to the Northeast Association Freshers' Meet</div>
+                        <div class="mail-snippet">Dear All, Aranyak: The Northeast Association cordi...</div>
+                        <div class="attachment-chip"><span class="material-icons" style="color:#ea4335;">image</span> image.jpeg</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fab" onclick="openCompose()">
+                <span class="material-icons">edit</span> Compose
+            </div>
+
+            <div class="bottom-nav">
+                <div class="nav-tab active">
+                    <span class="material-icons">mail</span>
+                    <span>Mail</span>
+                </div>
+                <div class="nav-tab">
+                    <span class="material-icons">videocam</span>
+                    <span>Meet</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thread Detail View -->
+        <div id="thread-view">
+            <div class="thread-header">
+                <span class="material-icons" onclick="backToInbox()" style="cursor:pointer;">arrow_back</span>
+                <span class="material-icons">archive</span>
+                <span class="material-icons">delete</span>
+                <span class="material-icons">mail_outline</span>
+                <span style="margin-left: auto;" class="material-icons">more_vert</span>
+            </div>
+            <div class="thread-body-content">
+                <div class="thread-subject-title" id="main-subject">To go out permission <span style="font-size:11px; background:#f1f3f4; padding:2px 6px; border-radius:4px; font-weight:normal;">inbox x</span></div>
+                
+                <!-- Student Message Card -->
+                <div class="thread-msg-card">
+                    <div class="thread-msg-header">
+                        <div>
+                            <strong style="font-size: 13px;">MARELLA VISHNU PAVAN KUMAR 24BCA7531</strong><br>
+                            <span style="font-size: 11px; color: var(--text-muted);">&lt;pavan.24bca7531@vitapstudent.ac.in&gt;</span>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                to Thota <span class="material-icons" style="font-size: 14px; vertical-align: middle; cursor: pointer;" onclick="toggleStudentSecurity(event)">arrow_drop_down</span>
+                            </div>
+
+                            <!-- Student Security Box -->
+                            <div class="security-details" id="student-security-box">
+                                <table style="text-align: left; border-spacing: 4px;">
+                                    <tr><td style="color: #5f6368; text-align: right;">from:</td><td><strong>MARELLA VISHNU PAVAN KUMAR 24BCA7531</strong><br>&lt;pavan.24bca7531@vitapstudent.ac.in&gt;</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">to:</td><td>Thota Ramathulasi &lt;ramathulasi.t@vitap.ac.in&gt;</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">date:</td><td id="student-sec-date-str">Sep 9, 2026, 12:19 PM</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">subject:</td><td id="student-sec-subject">To go out permission</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">mailed-by:</td><td>vitapstudent.ac.in</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-align: right;">
+                            <span id="sent-date-str">Sep 9, 2026, 12:19 PM</span><br>
+                            <span class="material-icons" style="font-size: 16px;">star_border</span>
+                            <span class="material-icons" style="font-size: 16px;">reply</span>
+                        </div>
+                    </div>
+                    <div class="thread-msg-body" id="student-body">Mam, I am writing this mail to go out for my home town for occasion of festival so please give permission
+Thankyou</div>
+                </div>
+
+                <!-- Professor Approved Message Card -->
+                <div class="thread-msg-card">
+                    <div class="thread-msg-header">
+                        <div>
+                            <strong style="font-size: 13px;">Thota Ramathulasi</strong><br>
+                            <span style="font-size: 11px; color: var(--text-muted);">&lt;ramathulasi.t@vitap.ac.in&gt;</span>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                to me <span class="material-icons" style="font-size: 14px; vertical-align: middle; cursor: pointer;" onclick="toggleProfSecurity(event)">arrow_drop_down</span>
+                            </div>
+
+                            <!-- Professor Security Box -->
+                            <div class="security-details" id="prof-security-box">
+                                <table style="text-align: left; border-spacing: 4px;">
+                                    <tr><td style="color: #5f6368; text-align: right;">from:</td><td>Thota Ramathulasi &lt;ramathulasi.t@vitap.ac.in&gt;</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">to:</td><td>MARELLA VISHNU PAVAN KUMAR &lt;pavan.24bca7531@vitapstudent.ac.in&gt;</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">date:</td><td id="prof-sec-date-str">Sep 9, 2026, 12:22 PM</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">subject:</td><td id="prof-sec-subject">Re: To go out permission</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">mailed-by:</td><td>vitap.ac.in</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">signed-by:</td><td>vitap.ac.in</td></tr>
+                                    <tr><td style="color: #5f6368; text-align: right;">security:</td><td>Standard encryption (TLS)</td></tr>
+                                </table>
+                                <div style="margin-top: 6px;"><span class="material-icons" style="font-size:14px; color:#f4b400; vertical-align:middle;">label_important</span> Important mainly because it was sent directly to you.</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-align: right;">
+                            <span id="reply-date-str">Sep 9, 2026, 12:22 PM</span><br>
+                            <span class="material-icons" style="font-size: 16px;">star_border</span>
+                            <span class="material-icons" style="font-size: 16px;">reply</span>
+                        </div>
+                    </div>
+                    <div class="thread-msg-body">Your request is approved
+
+
+Best Regards,
+Dr. Thota Ramathulasi,
+Assistant Professor Senior Grade1,
+Department of Data Science & Engineering,
+School of Computer Science & Engineering,
+Vellore Institute of Technology-AP University. PIN:522241
+...</div>
+                    
+                    <div class="reply-suggestions">
+                        <div class="suggestion-chip">Thanks a lot.</div>
+                        <div class="suggestion-chip">Thank you for your response.</div>
+                        <div class="suggestion-chip">Thank you for your mail.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Compose Screen -->
+        <div id="compose-screen">
+            <div class="compose-topbar">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <span class="material-icons" onclick="closeCompose()" style="cursor:pointer;">arrow_back</span>
+                    <span style="font-size:18px; font-weight:500;">Compose</span>
+                </div>
+                <div style="display:flex; gap:16px; align-items:center;">
+                    <span class="material-icons">attach_file</span>
+                    <span class="material-icons" onclick="simulateSend()" style="color:var(--primary-blue); cursor:pointer;">send</span>
+                    <span class="material-icons">more_vert</span>
+                </div>
+            </div>
+            <div class="compose-field">
+                From: <span style="color:black; margin-left:8px; font-size: 13px;">pavan.24bca7531@vitapstudent.ac.in</span>
+            </div>
+            <div class="compose-field">
+                To: <input type="text" value="ramathulasi.t@vitap.ac.in">
+            </div>
+            <div class="compose-field">
+                <input type="text" id="compose-subject" placeholder="Subject">
+            </div>
+            <textarea class="compose-textarea-mobile" id="compose-body" placeholder="Compose email"></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        // Date formatting utility
+        function formatGmailDate(date) {
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = months[date.getMonth()];
+            const day = date.getDate();
+            const year = date.getFullYear();
+            
+            let hours = date.getHours();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            let minutes = date.getMinutes();
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            
+            return `${month} ${day}, ${year}, ${hours}:${minutes} ${ampm}`;
+        }
+
+        function getShortDate(date) {
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${months[date.getMonth()]} ${date.getDate()}`;
+        }
+
+        function openCompose() {
+            document.getElementById('compose-screen').style.display = 'flex';
+        }
+
+        function closeCompose() {
+            document.getElementById('compose-screen').style.display = 'none';
+        }
+
+        // Send triggers dynamic content mapping + exact approved chain
+        function simulateSend() {
+            const subjectVal = document.getElementById('compose-subject').value || 'To go out permission';
+            const bodyVal = document.getElementById('compose-body').value || 'Mam, I am writing this mail...';
+
+            document.getElementById('inbox-subject').innerText = subjectVal;
+            document.getElementById('main-subject').innerHTML = subjectVal + ' <span style="font-size:11px; background:#f1f3f4; padding:2px 6px; border-radius:4px; font-weight:normal;">inbox x</span>';
+            document.getElementById('student-body').innerText = bodyVal;
+            
+            document.getElementById('student-sec-subject').innerText = subjectVal;
+            document.getElementById('prof-sec-subject').innerText = "Re: " + subjectVal;
+
+            closeCompose();
+            
+            const now = new Date();
+            const sentDate = new Date(now);
+            const replyDate = new Date(now.getTime() + 3 * 60000); 
+
+            const sentDateString = formatGmailDate(sentDate);
+            const replyDateString = formatGmailDate(replyDate);
+            const shortDate = getShortDate(replyDate);
+
+            document.getElementById('target-email-date').innerText = shortDate;
+            document.getElementById('sent-date-str').innerText = sentDateString;
+            document.getElementById('reply-date-str').innerText = replyDateString;
+            
+            document.getElementById('student-sec-date-str').innerText = sentDateString;
+            document.getElementById('prof-sec-date-str').innerText = replyDateString;
+
+            const targetMailRow = document.getElementById('target-mail-row');
+            const mailList = document.getElementById('mail-list');
+            // Insert right below Dean Academics
+            mailList.insertBefore(targetMailRow, mailList.children[4]);
+            targetMailRow.style.display = 'flex';
+            
+            alert("Message sent. Check your inbox for the reply.");
+        }
+
+        function openThread() {
+            document.getElementById('thread-view').style.display = 'flex';
+        }
+
+        function backToInbox() {
+            document.getElementById('thread-view').style.display = 'none';
+        }
+
+        // Toggle dropdown logic for mobile arrows
+        function toggleStudentSecurity(e) {
+            e.stopPropagation();
+            const box = document.getElementById('student-security-box');
+            document.getElementById('prof-security-box').style.display = 'none'; 
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function toggleProfSecurity(e) {
+            e.stopPropagation();
+            const box = document.getElementById('prof-security-box');
+            document.getElementById('student-security-box').style.display = 'none'; 
+            box.style.display = box.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Close dropdowns if clicking anywhere else
+        document.addEventListener('click', function() {
+            document.getElementById('student-security-box').style.display = 'none';
+            document.getElementById('prof-security-box').style.display = 'none';
+        });
+
+        document.getElementById('student-security-box').addEventListener('click', function(e) { e.stopPropagation(); });
+        document.getElementById('prof-security-box').addEventListener('click', function(e) { e.stopPropagation(); });
+    </script>
+</body>
+</html>
